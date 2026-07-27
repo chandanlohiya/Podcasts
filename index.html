@@ -47,31 +47,39 @@
 
     <!-- Search Results -->
     <div class="grid" id="results"></div>
-<script>
+        <script>
         async function searchPodcasts() {
             const topic = document.getElementById("topicInput").value.trim();
             const resultsDiv = document.getElementById("results");
 
             if (!topic) return alert("Please enter a topic to search!");
 
-            resultsDiv.innerHTML = "<p style='color: var(--muted);'>Searching free networks...</p>";
+            resultsDiv.innerHTML = "<p style='color: var(--muted);'>Connecting to secure servers...</p>";
 
             try {
-                // Using a free public API (Invidious) that searches YouTube without needing an API Key.
-                // duration=long automatically filters out shorts and clips!
-                const url = `https://vid.puffyan.us/api/v1/search?q=${encodeURIComponent(topic + " podcast")}&type=video&duration=long`;
+                // Switching to the Piped network, which allows browser connections without security blocks
+                const url = `https://pipedapi.kavin.rocks/search?q=${encodeURIComponent(topic + " podcast")}&filter=videos`;
                 
                 const response = await fetch(url);
                 const data = await response.json();
 
                 resultsDiv.innerHTML = "";
 
-                data.forEach(item => {
-                    const videoId = item.videoId;
+                // Manually filter out Shorts and short clips (only keep videos longer than 20 mins / 1200 seconds)
+                const longVideos = data.items.filter(item => item.duration > 1200);
+
+                if (longVideos.length === 0) {
+                    resultsDiv.innerHTML = "<p style='color: var(--muted);'>No long podcasts found for this topic. Try a broader search!</p>";
+                    return;
+                }
+
+                // Show the top 12 results
+                longVideos.slice(0, 12).forEach(item => {
+                    // Extract the exact video ID
+                    const videoId = item.url.split("v=")[1].split("&")[0]; 
                     const title = item.title;
-                    const channel = item.author;
-                    // Grab the best quality thumbnail
-                    const thumbnail = item.videoThumbnails.find(t => t.quality === "medium")?.url || item.videoThumbnails[0].url;
+                    const channel = item.uploaderName;
+                    const thumbnail = item.thumbnail;
 
                     const card = document.createElement("div");
                     card.className = "card";
@@ -81,7 +89,7 @@
                         <img src="${thumbnail}" alt="Thumbnail">
                         <div class="card-body">
                             <h3 class="card-title">${title}</h3>
-                            <p class="card-channel">${channel} • ${Math.floor(item.lengthSeconds / 60)} mins</p>
+                            <p class="card-channel">${channel} • ${Math.floor(item.duration / 60)} mins</p>
                         </div>
                     `;
 
@@ -89,7 +97,8 @@
                 });
 
             } catch (err) {
-                resultsDiv.innerHTML = "<p style='color: red;'>Failed to fetch. The free server might be busy, try again in a moment!</p>";
+                resultsDiv.innerHTML = "<p style='color: red;'>Connection failed. The free server might be temporarily busy, please try again in a minute!</p>";
+                console.error("Error details:", err);
             }
         }
 
@@ -97,7 +106,7 @@
             const playerWrapper = document.getElementById("playerWrapper");
             const iframe = document.getElementById("videoPlayer");
 
-            // We embed the standard YouTube player here
+            // Embed the video directly
             iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
             playerWrapper.style.display = "block";
             playerWrapper.scrollIntoView({ behavior: 'smooth' });
@@ -106,4 +115,3 @@
 </body>
 </html>
 
-    
