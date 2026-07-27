@@ -3,22 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PodStream - Free Podcasts</title>
+    <title>PodStream - Pro Version</title>
     <style>
-        :root {
-            --bg-color: #0f172a; --card-bg: #1e293b; --accent: #38bdf8; --text: #f8fafc; --muted: #94a3b8;
-        }
-        body {
-            font-family: system-ui, sans-serif; background-color: var(--bg-color); color: var(--text); margin: 0; padding: 16px; max-width: 1000px; margin: 0 auto;
-        }
-        header { text-align: center; padding: 20px 0; }
+        :root { --bg-color: #0f172a; --card-bg: #1e293b; --accent: #38bdf8; --text: #f8fafc; --muted: #94a3b8; }
+        body { font-family: system-ui, sans-serif; background-color: var(--bg-color); color: var(--text); margin: 0; padding: 16px; max-width: 1000px; margin: 0 auto; }
+        header { text-align: center; padding: 20px 0 10px 0; }
         h1 { margin: 0; font-size: 1.8rem; color: var(--accent); }
-        .search-box { display: flex; gap: 10px; margin: 20px 0; }
-        input { flex: 1; padding: 14px; border-radius: 10px; border: 1px solid #334155; background: var(--card-bg); color: white; font-size: 1rem; }
-        button { padding: 14px 20px; border-radius: 10px; border: none; background: var(--accent); color: #0f172a; font-weight: bold; cursor: pointer; }
-        .player-container {
-            margin-bottom: 30px; position: relative; padding-bottom: 56.25%; height: 0; border-radius: 12px; background: #000; display: none; overflow: hidden;
-        }
+        
+        .api-box { background: #1e293b; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #334155; }
+        .api-box p { margin: 0 0 10px 0; font-size: 0.9rem; color: var(--accent); }
+        .api-input-group { display: flex; gap: 10px; }
+        .api-input-group input { flex: 1; padding: 10px; border-radius: 6px; border: none; background: #0f172a; color: white; }
+        .api-input-group button { padding: 10px 15px; border-radius: 6px; border: none; background: var(--muted); color: white; cursor: pointer; }
+        
+        .search-box { display: flex; gap: 10px; margin: 0 0 20px 0; }
+        .search-box input { flex: 1; padding: 14px; border-radius: 10px; border: 1px solid #334155; background: var(--card-bg); color: white; font-size: 1rem; }
+        .search-box button { padding: 14px 20px; border-radius: 10px; border: none; background: var(--accent); color: #0f172a; font-weight: bold; cursor: pointer; }
+        
+        .player-container { margin-bottom: 30px; position: relative; padding-bottom: 56.25%; height: 0; border-radius: 12px; background: #000; display: none; overflow: hidden; }
         .player-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
         .card { background: var(--card-bg); border-radius: 12px; overflow: hidden; cursor: pointer; }
@@ -32,11 +34,19 @@
 
     <header>
         <h1>🎙️ PodStream</h1>
-        <p style="color: var(--muted); margin-top: 5px;">100% Free Long-form Podcasts & Audiobooks</p>
     </header>
 
+    <!-- Key setup -->
+    <div class="api-box" id="apiBox">
+        <p>🔑 Enter your free YouTube API Key to unlock searches:</p>
+        <div class="api-input-group">
+            <input type="text" id="apiKeyInput" placeholder="Paste your key here...">
+            <button onclick="saveApiKey()">Save Key</button>
+        </div>
+    </div>
+
     <div class="search-box">
-        <input type="text" id="topicInput" placeholder="Search a topic (e.g., Space, History)...">
+        <input type="text" id="topicInput" placeholder="Search a topic (e.g., Space, AI, History)...">
         <button onclick="searchPodcasts()">Search</button>
     </div>
 
@@ -47,42 +57,58 @@
 
     <!-- Search Results -->
     <div class="grid" id="results"></div>
-            <script>
+
+    <script>
+        // Check for saved key when page loads
+        document.addEventListener("DOMContentLoaded", () => {
+            const savedKey = localStorage.getItem("yt_api_key");
+            if (savedKey) {
+                document.getElementById("apiKeyInput").value = savedKey;
+                document.getElementById("apiBox").style.display = "none"; // Hide box if key exists
+            }
+        });
+
+        function saveApiKey() {
+            const key = document.getElementById("apiKeyInput").value.trim();
+            if (key) {
+                localStorage.setItem("yt_api_key", key);
+                alert("Key saved! You can now search.");
+                document.getElementById("apiBox").style.display = "none";
+            }
+        }
+
         async function searchPodcasts() {
             const topic = document.getElementById("topicInput").value.trim();
+            const apiKey = localStorage.getItem("yt_api_key");
             const resultsDiv = document.getElementById("results");
 
+            if (!apiKey) return alert("Please paste your free YouTube API key first!");
             if (!topic) return alert("Please enter a topic to search!");
 
-            resultsDiv.innerHTML = "<p style='color: var(--muted);'>Bypassing security blocks (this takes a moment)...</p>";
+            resultsDiv.innerHTML = "<p style='color: var(--muted);'>Searching YouTube...</p>";
 
             try {
-                // 1. The original target search URL
-                const searchUrl = `https://pipedapi.kavin.rocks/search?q=${encodeURIComponent(topic + " podcast")}&filter=videos`;
+                // Official YouTube API: Fast, reliable, never blocks you!
+                // videoDuration=long filters out shorts and clips under 20 minutes
+                const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(topic + " podcast audiobook")}&type=video&videoDuration=long&maxResults=12&key=${apiKey}`;
                 
-                // 2. Wrap it in a free proxy (AllOrigins) so your iPad doesn't block it!
-                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(searchUrl)}`;
-                
-                const response = await fetch(proxyUrl);
+                const response = await fetch(url);
                 const data = await response.json();
 
-                resultsDiv.innerHTML = "";
-
-                // Keep only videos longer than 20 mins (1200 seconds)
-                const longVideos = data.items.filter(item => item.duration > 1200);
-
-                if (longVideos.length === 0) {
-                    resultsDiv.innerHTML = "<p style='color: var(--muted);'>No long podcasts found for this topic. Try a broader search!</p>";
+                if (data.error) {
+                    resultsDiv.innerHTML = `<p style='color: red;'>API Error: ${data.error.message}</p>`;
+                    // Show the API box again so you can fix the key
+                    document.getElementById("apiBox").style.display = "block";
                     return;
                 }
 
-                // Show the top 12 results
-                longVideos.slice(0, 12).forEach(item => {
-                    // Extract the exact video ID
-                    const videoId = item.url.split("v=")[1].split("&")[0]; 
-                    const title = item.title;
-                    const channel = item.uploaderName;
-                    const thumbnail = item.thumbnail;
+                resultsDiv.innerHTML = "";
+
+                data.items.forEach(item => {
+                    const videoId = item.id.videoId;
+                    const title = item.snippet.title;
+                    const channel = item.snippet.channelTitle;
+                    const thumbnail = item.snippet.thumbnails.medium.url;
 
                     const card = document.createElement("div");
                     card.className = "card";
@@ -92,7 +118,7 @@
                         <img src="${thumbnail}" alt="Thumbnail">
                         <div class="card-body">
                             <h3 class="card-title">${title}</h3>
-                            <p class="card-channel">${channel} • ${Math.floor(item.duration / 60)} mins</p>
+                            <p class="card-channel">${channel}</p>
                         </div>
                     `;
 
@@ -100,15 +126,13 @@
                 });
 
             } catch (err) {
-                resultsDiv.innerHTML = "<p style='color: red;'>Connection blocked again. The free servers are being stubborn today!</p>";
-                console.error("Error details:", err);
+                resultsDiv.innerHTML = "<p style='color: red;'>Failed to connect to YouTube.</p>";
             }
         }
 
         function playVideo(videoId) {
             const playerWrapper = document.getElementById("playerWrapper");
             const iframe = document.getElementById("videoPlayer");
-
             iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
             playerWrapper.style.display = "block";
             playerWrapper.scrollIntoView({ behavior: 'smooth' });
