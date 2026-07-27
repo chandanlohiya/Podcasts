@@ -47,25 +47,28 @@
 
     <!-- Search Results -->
     <div class="grid" id="results"></div>
-        <script>
+            <script>
         async function searchPodcasts() {
             const topic = document.getElementById("topicInput").value.trim();
             const resultsDiv = document.getElementById("results");
 
             if (!topic) return alert("Please enter a topic to search!");
 
-            resultsDiv.innerHTML = "<p style='color: var(--muted);'>Connecting to secure servers...</p>";
+            resultsDiv.innerHTML = "<p style='color: var(--muted);'>Bypassing security blocks (this takes a moment)...</p>";
 
             try {
-                // Switching to the Piped network, which allows browser connections without security blocks
-                const url = `https://pipedapi.kavin.rocks/search?q=${encodeURIComponent(topic + " podcast")}&filter=videos`;
+                // 1. The original target search URL
+                const searchUrl = `https://pipedapi.kavin.rocks/search?q=${encodeURIComponent(topic + " podcast")}&filter=videos`;
                 
-                const response = await fetch(url);
+                // 2. Wrap it in a free proxy (AllOrigins) so your iPad doesn't block it!
+                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(searchUrl)}`;
+                
+                const response = await fetch(proxyUrl);
                 const data = await response.json();
 
                 resultsDiv.innerHTML = "";
 
-                // Manually filter out Shorts and short clips (only keep videos longer than 20 mins / 1200 seconds)
+                // Keep only videos longer than 20 mins (1200 seconds)
                 const longVideos = data.items.filter(item => item.duration > 1200);
 
                 if (longVideos.length === 0) {
@@ -97,7 +100,7 @@
                 });
 
             } catch (err) {
-                resultsDiv.innerHTML = "<p style='color: red;'>Connection failed. The free server might be temporarily busy, please try again in a minute!</p>";
+                resultsDiv.innerHTML = "<p style='color: red;'>Connection blocked again. The free servers are being stubborn today!</p>";
                 console.error("Error details:", err);
             }
         }
@@ -106,7 +109,6 @@
             const playerWrapper = document.getElementById("playerWrapper");
             const iframe = document.getElementById("videoPlayer");
 
-            // Embed the video directly
             iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
             playerWrapper.style.display = "block";
             playerWrapper.scrollIntoView({ behavior: 'smooth' });
@@ -114,4 +116,3 @@
     </script>
 </body>
 </html>
-
